@@ -1,0 +1,27 @@
+====Begin====
+00:11: Upon loading a new file, check the "load resources" box.  This will load the human-readable data objects and method names.
+
+00:21: This dialogue box is asking for the symbol store, we can see we don't have the path, C:\Users\Zhiyun-pc-desktop..., thus we can click "no"
+
+00:31: Proximity view is the control flow graph of the program.  You may use it or not, it might be helpful in deriving the context of the application.  You may always go back to it through: "View->Sub View->Proximity browser"
+
+00:45: By enabling "View->Toolbars->Advanced Mode" it makes the timeline view bigger and adds a few extra bells and whistles
+
+01:44: To edit an instruction, place your cursor on the instruction you wish to edit, and creat a patch.  To do so: "Edit->Patch Program->Change byte..."
+
+01:47: This menu gives you a significant amount of information.  The address should display the address where your cursor is, if it doesn't you aren't editing the line you think you are.  The Value is what you want to change.  The first octet should be the only one your interested in.  In this case, we are interested in the "0F" instruction, which maps to "movzx" in assembly.
+
+01:52: I change the "0F"(movzx) instruction to an arbitrary "75"(jnz) instruction.
+
+01:56: You can see the effect of that change
+
+02:12: You must apply your patch(es) to the executable.  This is done through the "Edit->Patch program->Apply patches to input file..." menu.
+
+02:19: You are free to create a backup or restore file.  They aren't completely necessary in this case.  You can ignore the meaning of the Start/End EA.
+
+02:25: Check your work.  Obviously, this example will crash the program, so there is no need to demonstrate that.
+
+02:26-end: (Shameless admission) It was my first time using OsX's screen recorder, so it took me about 40 seconds to figure out how to stop screen recording, so you can stop watching after 02:25.
+
+====End====
+

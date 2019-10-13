@@ -1,0 +1,64 @@
+1. What's the length of return value of md5 function?
+
+   16 bytes
+   Sometimes you might see a 32-byte representation. For example, "6e14652f333d6482ece7d983743a5e37". 
+   In fact the result is represented in hexadecimal. e.g. 6e means a single byte 0x6e. 
+   32-byte representation is just for display purposes as some bytes cannot be rendered well as characters. 
+   During the computation you should use the 16-byte representation.
+   
+2. In initialization 3(4), what does "length(password) bytes of the Alternate sum, repeated as necessary" mean?
+
+   Let len1 = length of password, len2 = length of Alternate sum (16 bytes)
+   if len1<len2: pick the first len1 bytes of Alternate sum
+   is len1>len2: pick the first len1 bytes of repeated Alternate sum 
+   for example, if Alternate sum is "1234567891234567"  if password is "aaaaaa", then result here is "123456"
+                if password is "aaaaaabbbbbbccccccddddddeeeeeeffffff" , then result here is "123456789123456712345678912345671234"  
+
+3. In initialization 5 "For each bit in length(password), from low to high and stopping after the most significant set bit
+                       If the bit is set, append a NULL byte
+                       If it’s unset, append the first byte of the password"
+
+   "length(password)" is a number, e.g. "6", which is 0110 in binary. From low to high is bit is "0"(unset), "1"(set) ,"1"(set), "0"(unset). 
+   This means there will be 3 bytes being appended.
+
+
+4. "Pick out the 16 bytes in this order: 11 4 10 5 3 9 15 2 8 14 1 7 13 0 6 12.
+   For each group of 6 bits (there are 22 groups), starting with the least significant
+   Output the corresponding base64 character with this index" 
+   
+   Here we need to reorder the byte sequence first. For example"
+   0123456789abcdef => b4a539f28e17d06c
+
+   We then group them by every 6-bits
+   16 bytes = 128 bits = 21 * 6 + 2 bits = 22 groups
+   
+   Finally, starting from the least significant group, we use the crypt base64 set and compute the final encoding.
+
+   For example: For 4-byte sequence "abcd"
+   Its ASCII code is 97, 98, 99 ,100 respectively. Binary representation is 01100001 01100010 01100011 01100100
+   We then group them by every 6-bits, starting from the least significant byte "d". 
+   We get: 01 100001 011000 100110 001101 100100, or 1 33 24 38 13 36 in decimal.
+   Crypt base64 set is C = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+   Thus, the encoded result for "abcd" is YBaMV/
+
+   Notice that in memory, "a" has the lowest address. But in here, we consider "d" as the least significant byte.
+   
+5. What MD5 function should I use?
+
+   For python, you can use : 
+
+       from hashlib import md5
+
+       md5(string).digest()
+
+   For C:
+
+       #include <openssl/md5.h>
+
+       MD5_CTX context;
+       MD5Init(&context);
+       MD5Update(&context, string, length);
+       MD5Final(result, &context);
+   
+   Search them on Google for more details.
+   

